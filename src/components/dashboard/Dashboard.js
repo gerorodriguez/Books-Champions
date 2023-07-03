@@ -1,8 +1,9 @@
+import "../../App.css";
 import { useEffect, useState } from "react";
-
 import NewBook from "../NewBook/NewBook";
-import BooksFilter from "../bookFilter/BookFilter";
 import Books from "../books/Books";
+import BooksFilter from "../bookFilter/BookFilter";
+
 const BOOKS = [
   {
     id: 1,
@@ -36,38 +37,47 @@ const BOOKS = [
 
 const Dashboard = () => {
   const [books, setBooks] = useState([]);
-  const [yearFiltered, setYearFiltered] = useState("2023");
+
+  const [year, setYear] = useState("");
 
   useEffect(() => {
-    fetch("https://63a44a012a73744b0072f847.mockapi.io/api/books/Books", {
+    fetch("http://localhost:8080/api/books", {
       headers: {
         Accept: "application/json",
       },
     })
       .then((response) => response.json())
-      .then((bookData) => {
-        const booksMapped = bookData.map((book) => ({
-          ...book,
-          dateRead: new Date(book.dateRead),
+      .then((booksData) => {
+        const booksMapped = booksData.map((book) => ({
+          id: book.id,
+          title: book.bookTitle,
+          author: book.author.authorName + " " + book.author.authorLastName,
+          dateRead: new Date(book.date),
+          pageCount: book.amountPages,
         }));
         setBooks(booksMapped);
       })
-      .catch((error) => console.log(error));
+      .catch((error) => console.error(error));
   }, []);
 
   const addBookHandler = (book) => {
     const dateString = book.dateRead.toISOString().slice(0, 10);
-
-    fetch("https://63a44a012a73744b0072f847.mockapi.io/api/books/Books", {
+    const authorFullName = book.author.split(" ");
+    const authorName = authorFullName[0];
+    const authorLastName = authorFullName[1];
+    fetch("http://localhost:8080/api/books", {
       method: "POST",
       headers: {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        title: book.title,
-        author: book.author,
-        dateRead: dateString,
-        pageCount: parseInt(book.pageCount, 10),
+        bookTitle: book.title,
+        date: dateString,
+        amountPages: parseInt(book.pageCount, 10),
+        author: {
+          authorName: authorName,
+          authorLastName: authorLastName,
+        },
       }),
     })
       .then((response) => {
@@ -78,29 +88,22 @@ const Dashboard = () => {
       })
       .then(() => {
         const newBooksArray = [book, ...books];
+        console.log(newBooksArray);
         setBooks(newBooksArray);
       })
       .catch((error) => console.log(error));
-
-    // const newBooksData = [book, ...books];
-    // setBooks(newBooksData);
-    // localStorage.setItem("books", JSON.stringify(newBooksData));
   };
 
   const handleFilterChange = (year) => {
-    setYearFiltered(year);
+    setYear(year);
   };
-
   return (
     <>
       <h1>Books Champion App!</h1>
-      <h3>¡Quiero leer libros!</h3>
+      <p>¡Quiero leer libros!</p>
       <NewBook onBookAdded={addBookHandler} />
-      <BooksFilter
-        yearFiltered={yearFiltered}
-        onYearChange={handleFilterChange}
-      />
-      <Books yearFiltered={yearFiltered} books={books} />
+      <BooksFilter year={year} onYearChange={handleFilterChange} />
+      <Books books={books} year={year} />
     </>
   );
 };
